@@ -7,7 +7,9 @@ from sattimelapse.time_lapse import SentinelHubTimelapse
 # Loading polygon of nominal water extent
 from shapely.wkt import loads
 
-WMS_INSTANCE = '31d7cfd1-64ac-409c-a027-0a2ec537aa95'
+
+with open('myID.txt') as f:
+    WMS_INSTANCE = f.readline()
 
 
 # wkt_file = 'theewaterskloof_dam_nominal.wkt'
