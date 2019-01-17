@@ -1,8 +1,8 @@
 
 
 import numpy as np
-from esasnappy import ProductUtils, ProductIO
-import utils
+from esasnappy import ProductIO
+from sattimelapse import utils
 
 file = '/DATA/Satellite/SENTINEL2/test/dimitri/L1C/S2A_MSIL1C_20170903T090551_N0205_R050_T35TLE_20170903T090723.SAFE/'
 

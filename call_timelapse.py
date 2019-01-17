@@ -1,10 +1,8 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os, sys
 import geopandas as gpd
 
 from sentinelhub.common import BBox, CRS
-from time_lapse import SentinelHubTimelapse
+from sattimelapse.time_lapse import SentinelHubTimelapse
 
 # Loading polygon of nominal water extent
 from shapely.wkt import loads
