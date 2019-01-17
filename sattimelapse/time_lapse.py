@@ -36,7 +36,7 @@ class SentinelHubTimelapse(object):
     def __init__(self, project_name, bbox=None, time_interval=None, new=True, clean=False, instance_id='',
                  full_res=('10m', '10m'), preview_res=('60m', '60m'), cloud_mask_res=('60m', '60m'),
                  use_atmcor=False, layer='TRUE-COLOR-S2-L1C',
-                 time_difference=datetime.timedelta(hours=2)):
+                 time_difference=datetime.timedelta(hours=2),small_area=True):
 
         self.project_name = project_name
         self.preview_folder = os.path.join(project_name, 'previews')
@@ -55,19 +55,20 @@ class SentinelHubTimelapse(object):
         if not new:
             return
 
-        self.preview_request = WcsRequest(data_folder=self.preview_folder, layer=layer, bbox=bbox,
-                                          time=time_interval, resx=preview_res[0], resy=preview_res[1],
-                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
-                                          custom_url_params={CustomUrlParam.TRANSPARENT: True},
-                                          time_difference=time_difference)
+        if small_area:
+            self.preview_request = WcsRequest(data_folder=self.preview_folder, layer=layer, bbox=bbox,
+                                              time=time_interval, resx=preview_res[0], resy=preview_res[1],
+                                              maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                              custom_url_params={CustomUrlParam.TRANSPARENT: True},
+                                              time_difference=time_difference)
 
-        self.fullres_request = WcsRequest(data_folder=self.data_folder, layer=layer, bbox=bbox,
-                                          time=time_interval, resx=full_res[0], resy=full_res[1],
-                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
-                                          custom_url_params={CustomUrlParam.TRANSPARENT: True,
-                                                             CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {
-                                              CustomUrlParam.TRANSPARENT: True},
-                                          time_difference=time_difference)
+            self.fullres_request = WcsRequest(data_folder=self.data_folder, layer=layer, bbox=bbox,
+                                              time=time_interval, resx=full_res[0], resy=full_res[1],
+                                              maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                              custom_url_params={CustomUrlParam.TRANSPARENT: True,
+                                                                 CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {
+                                                  CustomUrlParam.TRANSPARENT: True},
+                                              time_difference=time_difference)
 
         wcs_request = WcsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
                                  resx=cloud_mask_res[0], resy=cloud_mask_res[1], maxcc=1.0,
