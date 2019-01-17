@@ -35,6 +35,7 @@ class SentinelHubTimelapse(object):
 
     def __init__(self, project_name, bbox=None, time_interval=None, new=True, clean=False, instance_id='',
                  full_res=('10m', '10m'), preview_res=('60m', '60m'), cloud_mask_res=('60m', '60m'),
+                 full_size=(1920, 1080), preview_size=(455, 256),
                  use_atmcor=False, layer='TRUE-COLOR-S2-L1C',
                  time_difference=datetime.timedelta(hours=2),small_area=True):
 
@@ -69,6 +70,19 @@ class SentinelHubTimelapse(object):
                                                                  CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {
                                                   CustomUrlParam.TRANSPARENT: True},
                                               time_difference=time_difference)
+        else:
+            self.preview_request = WmsRequest(data_folder=project_name + '/previews', layer=layer, bbox=bbox,
+                                          time=time_interval, width=preview_size[0], height=preview_size[1],
+                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                          custom_url_params={CustomUrlParam.TRANSPARENT: True},
+                                          time_difference=time_difference)
+
+            self.fullres_request = WmsRequest(data_folder=project_name + '/fullres', layer=layer, bbox=bbox,
+                                          time=time_interval, width=full_size[0], height=full_size[1],
+                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                          custom_url_params={CustomUrlParam.TRANSPARENT: True,
+                                              CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {CustomUrlParam.TRANSPARENT: True},
+                                          time_difference=time_difference)
 
         wcs_request = WcsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
                                  resx=cloud_mask_res[0], resy=cloud_mask_res[1], maxcc=1.0,

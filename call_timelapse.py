@@ -47,6 +47,7 @@ def get_bbox_size(bbox):
     gx = geod.Inverse(p1_lat, p1_lon, p2_lat, p2_lon)
     gy = geod.Inverse(p2_lat, p2_lon, p3_lat, p3_lon)
     print("Distance is E-W x N-S {:.2f}m x {:.2f}m".format(gx['s12'], gy['s12']))
+    return gx['s12'], gy['s12']
 
 
 time_interval = ['2015-05-01', '2018-09-30']
@@ -90,9 +91,12 @@ wkt_file = os.path.join(project_name, 'shape', lake + '.wkt')
 if not os.path.isfile(wkt_file):
     shp2wkt(wkt_file.replace('wkt', 'shp'))
 bbox = bbox_creator(wkt_file, 0.3)
-get_bbox_size(bbox)
+x,y = get_bbox_size(bbox)
+small_area = True
+if (x >= 50000) | (y >= 50000):
+    small_area = False
 
-make_timelapse(project_name, bbox, time_interval, new=True, clean=False)
+make_timelapse(project_name, bbox, time_interval, new=True, clean=False,small_area=small_area)
 
 #
 # from time_lapse import SentinelHubTimelapse
