@@ -71,18 +71,19 @@ class SentinelHubTimelapse(object):
                                                   CustomUrlParam.TRANSPARENT: True},
                                               time_difference=time_difference)
         else:
-            self.preview_request = WmsRequest(data_folder=project_name + '/previews', layer=layer, bbox=bbox,
+            self.preview_request = WmsRequest(data_folder=self.preview_folder, layer=layer, bbox=bbox,
                                           time=time_interval, width=preview_size[0], height=preview_size[1],
                                           maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
                                           custom_url_params={CustomUrlParam.TRANSPARENT: True},
                                           time_difference=time_difference)
 
-            self.fullres_request = WmsRequest(data_folder=project_name + '/fullres', layer=layer, bbox=bbox,
+            self.fullres_request = WmsRequest(data_folder=self.data_folder, layer=layer, bbox=bbox,
                                           time=time_interval, width=full_size[0], height=full_size[1],
                                           maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
                                           custom_url_params={CustomUrlParam.TRANSPARENT: True,
                                               CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {CustomUrlParam.TRANSPARENT: True},
                                           time_difference=time_difference)
+            cloud_mask_res=('180m','180m')
 
         wcs_request = WcsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
                                  resx=cloud_mask_res[0], resy=cloud_mask_res[1], maxcc=1.0,
