@@ -28,21 +28,22 @@ datestamps_dir = os.path.join(appdir, 'datestamps')
 LOGGER = logging.getLogger(__name__)
 
 
-class SentinelHubTimelapse(object):
+class timeseries(object):
     """
-    Class for creating timelapses with Sentinel-2 images using Sentinel Hub's Python library.
+    Class for creating timeseries with satellite images available through SentinelHub portal
     """
 
     def __init__(self, project_name, bbox=None, time_interval=None, new=True, clean=False, instance_id='',
                  full_res=('10m', '10m'), preview_res=('60m', '60m'), cloud_mask_res=('60m', '60m'),
-                 full_size=(1920, 1080), preview_size=(455, 256),
+                 full_size=(1920, 1080), preview_size=(600, None),
                  use_atmcor=False, layer='TRUE-COLOR-S2-L1C',
-                 time_difference=datetime.timedelta(hours=2),small_area=True):
+                 custom_script='return [B01,B02,B04,B05,B08,B8A,B09,B10,B11,B12]',
+                 time_difference=datetime.timedelta(hours=2), pix_based=False):
 
         self.project_name = project_name
-        self.preview_folder = os.path.join(project_name, 'previews')
-        self.data_folder = os.path.join(project_name, 'data')
-        self.mask_folder = os.path.join(project_name, 'mask')
+        self.preview_folder = os.path.join(project_name, 'data', 'previews')
+        self.data_folder = os.path.join(project_name, 'data', 'full_res')
+        self.mask_folder = os.path.join(project_name, 'data', 'custom')
         self.cloud_masks = None
         self.cloud_coverage = None
         self.full_res_data = None
@@ -56,7 +57,7 @@ class SentinelHubTimelapse(object):
         if not new:
             return
 
-        if small_area:
+        if pix_based:
             self.preview_request = WcsRequest(data_folder=self.preview_folder, layer=layer, bbox=bbox,
                                               time=time_interval, resx=preview_res[0], resy=preview_res[1],
                                               maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
@@ -70,32 +71,35 @@ class SentinelHubTimelapse(object):
                                                                  CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {
                                                   CustomUrlParam.TRANSPARENT: True},
                                               time_difference=time_difference)
-            wcs_request = WcsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
-                                 resx=cloud_mask_res[0], resy=cloud_mask_res[1], maxcc=1.0,
-                                 image_format=MimeType.TIFF_d32f, instance_id=instance_id,
-                                 time_difference=time_difference, custom_url_params={CustomUrlParam.EVALSCRIPT:
-                                                                                         MODEL_EVALSCRIPT})
+            self.custom_request = WcsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
+                                             resx=cloud_mask_res[0], resy=cloud_mask_res[1], maxcc=1.0,
+                                             image_format=MimeType.TIFF_d32f, instance_id=instance_id,
+                                             time_difference=time_difference,
+                                             custom_url_params={CustomUrlParam.EVALSCRIPT: custom_script,
+                                                                CustomUrlParam.ATMFILTER: 'NONE'})
         else:
-            self.preview_request = WmsRequest(data_folder=project_name + '/previews', layer=layer, bbox=bbox,
-                                          time=time_interval, width=preview_size[0], height=preview_size[1],
-                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
-                                          custom_url_params={CustomUrlParam.TRANSPARENT: True},
-                                          time_difference=time_difference)
+            self.preview_request = WmsRequest(data_folder=self.preview_folder, layer=layer, bbox=bbox,
+                                              time=time_interval, width=preview_size[0], height=preview_size[1],
+                                              maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                              custom_url_params={CustomUrlParam.TRANSPARENT: True},
+                                              time_difference=time_difference)
 
-            self.fullres_request = WmsRequest(data_folder=project_name + '/fullres', layer=layer, bbox=bbox,
-                                          time=time_interval, width=full_size[0], height=full_size[1],
-                                          maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
-                                          custom_url_params={CustomUrlParam.TRANSPARENT: True,
-                                              CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {CustomUrlParam.TRANSPARENT: True},
-                                          time_difference=time_difference)
+            self.fullres_request = WmsRequest(data_folder=self.data_folder, layer=layer, bbox=bbox,
+                                              time=time_interval, width=full_size[0], height=full_size[1],
+                                              maxcc=1.0, image_format=MimeType.PNG, instance_id=instance_id,
+                                              custom_url_params={CustomUrlParam.TRANSPARENT: True,
+                                                                 CustomUrlParam.ATMFILTER: 'ATMCOR'} if use_atmcor else {
+                                                  CustomUrlParam.TRANSPARENT: True},
+                                              time_difference=time_difference)
 
-            wcs_request = WmsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
-                                 width=preview_size[0], height=preview_size[1], maxcc=1.0,
-                                 image_format=MimeType.TIFF_d32f, instance_id=instance_id,
-                                 time_difference=time_difference, custom_url_params={CustomUrlParam.EVALSCRIPT:
-                                                                                         MODEL_EVALSCRIPT})
+            self.custom_request = WmsRequest(data_folder=self.mask_folder, layer=layer, bbox=bbox, time=time_interval,
+                                             width=preview_size[0], height=preview_size[1], maxcc=1.0,
+                                             image_format=MimeType.TIFF_d32f, instance_id=instance_id,
+                                             time_difference=time_difference,
+                                             custom_url_params={CustomUrlParam.EVALSCRIPT: custom_script,
+                                                                CustomUrlParam.ATMFILTER: 'NONE'})
 
-        self.cloud_mask_request = CloudMaskRequest(wcs_request)
+        self.cloud_mask_request = None  # CloudMaskRequest(wcs_request)
 
         self.transparency_data = None
         self.preview_transparency_data = None
@@ -108,8 +112,8 @@ class SentinelHubTimelapse(object):
         if self.dates != self.fullres_request.get_dates():
             raise ValueError('Lists of previews and full resolution images do not match.')
 
-        if self.dates != self.cloud_mask_request.get_dates():
-            raise ValueError('List of previews and cloud masks do not match.')
+        # if self.dates != self.cloud_mask_request.get_dates():
+        #     raise ValueError('List of previews and cloud masks do not match.')
 
         self.mask = np.zeros((len(self.dates),), dtype=np.uint8)
 
@@ -130,28 +134,46 @@ class SentinelHubTimelapse(object):
         self.clean_preview()
         self.clean_data()
 
-    def get_previews(self, redownload=False):
+    def get_previews(self, save_data=True, redownload=False):
         """
         Downloads and returns an numpy array of previews if previews were not already downloaded and saved to disk.
         Set `redownload` to True if to force downloading the previews again.
         """
 
-        self.previews = np.asarray(self.preview_request.get_data(save_data=True, redownload=redownload))
+        self.previews = np.asarray(self.preview_request.get_data(save_data=save_data, redownload=redownload))
         self.preview_transparency_data = self.previews[:, :, :, -1]
 
         LOGGER.info('%d previews have been downloaded and stored to numpy array of shape %s.', self.previews.shape[0],
                     self.previews.shape)
 
-    def save_fullres_images(self, redownload=False):
+    def get_fullres(self, save_data=True, redownload=False):
         """
         Downloads and saves fullres images used to produce the timelapse. Note that images for all available dates
         within the specified time interval are downloaded, although they will be for example masked due to too high
         cloud coverage.
         """
 
-        data4d = np.asarray(self.fullres_request.get_data(save_data=True, redownload=redownload))
+        data4d = np.asarray(self.fullres_request.get_data(save_data=save_data, redownload=redownload))
         self.full_res_data = data4d[:, :, :, :-1]
         self.transparency_data = data4d[:, :, :, -1]
+
+    def get_custom(self, save_data=True, redownload=False):
+        """
+        Downloads and saves custom-band images
+        """
+
+        self.custom_dates = self.custom_request.get_dates()
+        self.custom_bands = np.asarray(self.custom_request.get_data(save_data=save_data, redownload=redownload))
+        LOGGER.info('%d tiff data have been downloaded and stored to numpy array of shape %s.', self.custom_bands.shape[0],
+                    self.custom_bands.shape)
+
+    def overlay_cloud_mask(self, rgb_img, mask, within_range=None, filename=None):
+        """
+        Utility function for plotting RGB images with binary mask overlayed.
+        """
+        within_range = CommonUtil.get_within_range(within_range, rgb_img.shape[0])
+        self._plot_image(rgb_img[within_range[0]: within_range[1]],
+                         factor=1, mask=mask, filename=filename)
 
     def plot_preview(self, within_range=None, filename=None):
         """
@@ -175,7 +197,7 @@ class SentinelHubTimelapse(object):
         self._plot_image(self.cloud_masks[within_range[0]: within_range[1]],
                          factor=1, cmap=plt.cm.binary, filename=filename)
 
-    def _plot_image(self, data, factor=2.5, cmap=None, filename=None):
+    def _plot_image(self, data, factor=2.5, cmap=None, ctitle='', mask=None, filename=None):
         rows = data.shape[0] // 5 + (1 if data.shape[0] % 5 else 0)
         aspect_ratio = (1.0 * data.shape[1]) / data.shape[2]
         fig, axs = plt.subplots(nrows=rows, ncols=5, figsize=(15, 3 * rows * aspect_ratio))
@@ -186,12 +208,21 @@ class SentinelHubTimelapse(object):
                     caption = caption + '(' + "{0:2.0f}".format(self.cloud_coverage[index] * 100.0) + '%)'
 
                 ax.set_axis_off()
-                ax.imshow(data[index] * factor if data[index].shape[-1] == 3 or data[index].shape[-1] == 4 else
-                          data[index] * factor, cmap=cmap, vmin=0.0, vmax=1.0)
+                im = ax.imshow(data[index] * factor if data[index].shape[-1] == 3 or data[index].shape[-1] == 4 else
+                               data[index] * factor, cmap=cmap, vmin=0.0, vmax=1.0)
+                if mask is not None:
+                    mask_ = mask[index]
+                    cloud_image = np.zeros((mask_.shape[0], mask_.shape[1], 4), dtype=np.uint8)
+                    cloud_image[mask_ == 1] = np.asarray([255, 255, 0, 100], dtype=np.uint8)
+                    ax.imshow(cloud_image)
                 ax.text(0, -2, caption, fontsize=12, color='r' if self.mask[index] else 'g')
             else:
                 ax.set_axis_off()
 
+        if cmap is not None:
+            cax = fig.add_axes([0.35, 0.97, 0.3, 0.015])
+            cbar = plt.colorbar(im, cax, orientation='horizontal')
+            cbar.set_label(ctitle)
         if filename:
             plt.savefig(self.project_name + '/' + filename, bbox_inches='tight')
             plt.close()
@@ -245,7 +276,8 @@ class SentinelHubTimelapse(object):
         :param threshold:  A float from [0,1] specifying cloud threshold
         :type threshold: float or None
         """
-        self._run_cloud_detection(rerun, threshold)
+        if not rerun:
+            self._run_cloud_detection(rerun, threshold)
 
         self.cloud_coverage = np.asarray([self._get_coverage(mask) for mask in self.cloud_masks])
 
@@ -315,6 +347,11 @@ class SentinelHubTimelapse(object):
                                              "%Y-%m-%dT%H-%M-%S") + '.png',
                                          self._get_filename(datestamps_dir, date.strftime("%Y-%m-%d")),
                                          scale_factor=scale_factor) for date in filtered]
+
+    def get_coverage(self, cloud_masks=None):
+        if cloud_masks is None:
+            cloud_masks = self.cloud_masks
+        self.cloud_coverage = np.asarray([self._get_coverage(mask) for mask in cloud_masks])
 
     @staticmethod
     def _get_coverage(mask):

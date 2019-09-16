@@ -1,7 +1,7 @@
 import os, sys
 import geopandas as gpd
 
-from sentinelhub.common import BBox, CRS
+from sentinelhub import BBox, CRS
 from sattimelapse.time_lapse import SentinelHubTimelapse
 
 # Loading polygon of nominal water extent
@@ -9,7 +9,7 @@ from shapely.wkt import loads
 
 
 with open('myID.txt') as f:
-    WMS_INSTANCE = f.readline()
+    INSTANCE_ID = f.readline()
 
 
 # wkt_file = 'theewaterskloof_dam_nominal.wkt'
@@ -52,11 +52,8 @@ def get_bbox_size(bbox):
     return gx['s12'], gy['s12']
 
 
-time_interval = ['2015-05-01', '2018-09-30']
-
-
 def make_timelapse(msg, bbox, time_interval, *, mask_images=[], new=True, clean=False,
-                   max_cc=0.33, scale_factor=.43, fps=3, instance_id=WMS_INSTANCE, **kwargs):
+                   max_cc=0.33, scale_factor=.43, fps=3, instance_id=INSTANCE_ID, **kwargs):
     global timelapse
     timelapse = SentinelHubTimelapse(msg, bbox, time_interval, new, clean, instance_id, **kwargs)
     if new:
@@ -84,21 +81,27 @@ def shp2wkt(shapefile):
 
 
 lake = 'RAV34'
+#
+# idir = sys.argv[1]
+# lake = sys.argv[2]
+#
+# project_name = os.path.join(idir, lake)
+# wkt_file = os.path.join(project_name, 'shape', lake + '.wkt')
+project_name =sys.argv[1]
+wkt_file = sys.argv[2]
+project_name ='/DATA/projet/Karaoun'
+wkt_file ='/DATA/projet/Karaoun/shape/Karaoun.wkt'
+time_interval = ['2015-05-01', '2018-09-30']
 
-idir = sys.argv[1]
-lake = sys.argv[2]
-
-project_name = os.path.join(idir, lake)
-wkt_file = os.path.join(project_name, 'shape', lake + '.wkt')
 if not os.path.isfile(wkt_file):
     shp2wkt(wkt_file.replace('wkt', 'shp'))
 bbox = bbox_creator(wkt_file, 0.3)
 x,y = get_bbox_size(bbox)
 small_area = True
-if (x >= 50000) | (y >= 50000):
+if (x >= 40000) | (y >= 40000):
     small_area = False
 
-make_timelapse(project_name, bbox, time_interval, new=True, clean=False,small_area=small_area)
+make_timelapse(project_name, bbox, time_interval, new=True, clean=False, small_area=small_area)
 
 #
 # from time_lapse import SentinelHubTimelapse
