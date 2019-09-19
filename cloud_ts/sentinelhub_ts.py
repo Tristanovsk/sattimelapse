@@ -400,7 +400,7 @@ class timeseries(object):
         month_names = {1: 'J', 2: 'F', 3: 'M', 4: 'A', 5: 'M', 6: 'J', 7: 'J', 8: 'A', 9: 'S', 10: 'O', 11: 'N',
                        12: 'D'}
 
-        total_months = SentinelHubTimelapse._diff_month(start_dt, end_dt)
+        total_months = timeseries._diff_month(start_dt, end_dt)
         all_months = list(rrule(MONTHLY, count=total_months, dtstart=start_dt))
         return [month_names[date.month] for date in all_months]
 
