@@ -106,6 +106,7 @@ class timeseries(object):
         self.invalid_coverage = None
 
         self.dates = self.preview_request.get_dates()
+
         if not self.dates:
             raise ValueError('Input parameters are not valid. No Sentinel 2 image is found.')
 
@@ -114,7 +115,7 @@ class timeseries(object):
 
         # if self.dates != self.cloud_mask_request.get_dates():
         #     raise ValueError('List of previews and cloud masks do not match.')
-
+        self.dates = np.array(self.dates)
         self.mask = np.zeros((len(self.dates),), dtype=np.uint8)
 
         LOGGER.info('Found %d images of %s between %s and %s.', len(self.dates), project_name,
@@ -198,6 +199,7 @@ class timeseries(object):
                          factor=1, cmap=plt.cm.binary, filename=filename)
 
     def _plot_image(self, data, factor=2.5, cmap=None, ctitle='', mask=None, filename=None):
+
         rows = data.shape[0] // 5 + (1 if data.shape[0] % 5 else 0)
         aspect_ratio = (1.0 * data.shape[1]) / data.shape[2]
         fig, axs = plt.subplots(nrows=rows, ncols=5, figsize=(15, 3 * rows * aspect_ratio))
@@ -295,10 +297,12 @@ class timeseries(object):
         """
 
         # low-res and hi-res images/cloud masks may differ, just to be safe
-        coverage_fullres = np.asarray([1.0 - self._get_coverage(mask) for mask in self.transparency_data])
+        # but here masking is done on previews
+        #coverage_fullres = np.asarray([1.0 - self._get_coverage(mask) for mask in self.transparency_data])
         coverage_preview = np.asarray([1.0 - self._get_coverage(mask) for mask in self.preview_transparency_data])
+        #self.invalid_coverage = np.array([max(x, y) for x, y in zip(coverage_fullres, coverage_preview)])
 
-        self.invalid_coverage = np.array([max(x, y) for x, y in zip(coverage_fullres, coverage_preview)])
+        self.invalid_coverage = coverage_preview
 
         for index in range(0, len(self.mask)):
             if self.invalid_coverage[index] > max_invalid_coverage:

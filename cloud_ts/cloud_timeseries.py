@@ -19,15 +19,22 @@ with open('myID.txt') as f:
 project = "petit-saut"
 project_folder = '/DATA/projet/'+project+'/timeseries'
 ofile = os.path.join(project_folder,'cloud_cover_timeseries_'+project+'_S2.csv')
-
-time_span = ('2015-03-01', '2019-07-31')
-time_span = ('2019-01-01', '2019-08-31')
-# karaoun
-bbox_coords_wgs84 = [35.62, 33.47, 35.78, 33.67]
-# tchad
-bbox_coords_wgs84 = [14.221, 12.728, 14.84, 13.287]
 latmin, latmax, lonmin, lonmax = 4.65, 5.10, -53.25,-52.85
 bbox_coords_wgs84 = [lonmin,latmin, lonmax,  latmax]
+time_span = ('2015-03-01', '2019-08-31')
+time_span = ('2019-01-01', '2019-08-31')
+ofile = os.path.join(project_folder,'cloud_cover_timeseries_'+time_span[0]+'to'+time_span[1]+'_'+project+'_S2')
+
+# karaoun
+# project = "Karaoun"
+# project_folder = '/DATA/projet/'+project+'/timeseries'
+# ofile = os.path.join(project_folder,'cloud_cover_timeseries_'+project+'_S2.csv')
+#bbox_coords_wgs84 = [35.62, 33.47, 35.78, 33.67]
+
+# tchad
+# bbox_coords_wgs84 = [14.221, 12.728, 14.84, 13.287]
+
+
 
 bbox = BBox(bbox_coords_wgs84, crs=CRS.WGS84)
 
@@ -45,25 +52,34 @@ fig_proba = os.path.join('fig','cloud_proba_'+time_span[0]+'_'+time_span[1]+'.pd
 ts = timeseries(project_folder, bbox, time_span, instance_id=INSTANCE_ID)
 ts.get_previews()
 #ts.plot_preview(filename=fig_preview)
-
+print('mask invalid images')
+ts.mask_invalid_images(max_invalid_coverage=0.01)
 ts.get_custom()#redownload=True)
+
+# filter out inconsistent images
+ts.dates = ts.dates[ts.mask==0]
+ts.previews = ts.previews[ts.mask==0]
+ts.custom_bands = ts.custom_bands[ts.mask==0]
+ts.mask = ts.mask[ts.mask==0]
 
 cloud_detector = S2PixelCloudDetector(threshold=0.4, average_over=4, dilation_size=2)
 
 ts.cloud_probs = cloud_detector.get_cloud_probability_maps(ts.custom_bands)
 ts.cloud_masks = cloud_detector.get_cloud_masks(ts.custom_bands)
+
+
+
 ts.get_coverage()
 
 ts._plot_image(ts.cloud_probs,cmap=cmap,ctitle='Cloud probability (0 --> no cloud)', filename=fig_proba)
 ts.overlay_cloud_mask(ts.previews,ts.cloud_masks, filename=fig_preview)
 
 cc_df = pd.DataFrame(index=ts.dates,data={'cloud_cover': ts.cloud_coverage })
-cc_df.to_csv(ofile)
+cc_df.to_csv(ofile+'.csv')
 plt.Figure(figsize=(20,5))
 p = cc_df.plot(marker='o', linestyle='-')
-p.s
+plt.savefig(ofile+'.png', bbox_inches='tight')
 
-plt.plot(all_cloud_masks.get_dates(),cc.mean(axis=(1,2)))
 
 #####################
 # END
