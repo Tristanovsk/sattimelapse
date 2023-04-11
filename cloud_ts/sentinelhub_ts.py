@@ -254,6 +254,31 @@ class timeseries(object):
         with open(cloud_masks_filename, 'wb') as fp:
             np.save(fp, self.cloud_masks)
 
+    def _load_cloud_probs(self):
+        """
+        Loads masks from disk, if they already exist.
+        """
+        cloud_probs_filename = self.project_name + '/cloudmasks/cloudprobs.npy'
+
+        if not os.path.isfile(cloud_probs_filename):
+            return False
+
+        with open(cloud_probs_filename, 'rb') as fp:
+            self.cloud_probs = np.load(fp)
+        return True
+
+    def _save_cloud_probs(self):
+        """
+        Saves masks to disk.
+        """
+        cloud_probs_filename = self.project_name + '/cloudmasks/cloudprobs.npy'
+
+        if not os.path.exists(self.project_name + '/cloudmasks'):
+            os.makedirs(self.project_name + '/cloudmasks')
+
+        with open(cloud_probs_filename, 'wb') as fp:
+            np.save(fp, self.cloud_probs)
+
     def _run_cloud_detection(self, rerun, threshold):
         """
         Determines cloud masks for each acquisition.
